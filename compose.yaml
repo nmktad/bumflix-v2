@@ -36,6 +36,15 @@ services:
       interval: 5s
       timeout: 2s
       retries: 20
+  queue:
+    container_name: queue
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - queuedata:/var/lib/rabbitmq/data
 volumes:
   dbdata:
   objdata:
+  queuedata:
