@@ -24,15 +24,15 @@ services:
     volumes:
       - dbdata:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB={POSTGRES_DB}
-      - POSTGRES_USER={POSTGRES_USER}
-      - POSTGRES_PASSWORD={POSTGRES_PASSWORD}
+      - POSTGRES_DB={DB_NAME}
+      - POSTGRES_USER={DB_USER}
+      - POSTGRES_PASSWORD={DB_PASSWORD}
     ports:
-      - 5432:5432
+      - "5432:${DB_PORT}"
     healthcheck:
       # specifying user and database is needed to avoid `FATAL:  role "root" does not exist`
       # spam in the logs
-      test: ['CMD', 'pg_isready', '-U', 'prisma', '-d', 'tests']
+      test: ['CMD', 'pg_isready', '-U', 'postgres', '-d', 'bumflix']
       interval: 5s
       timeout: 2s
       retries: 20

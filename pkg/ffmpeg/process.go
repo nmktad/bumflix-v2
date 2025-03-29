@@ -14,13 +14,13 @@ import (
 )
 
 type env struct {
-	endpoint        []byte
-	accessKeyID     []byte
-	secretAccessKey []byte
-	useSSL          bool
+	Endpoint        []byte
+	AccessKeyID     []byte
+	SecretAccessKey []byte
+	UseSSL          bool
 }
 
-func loadMinioEnv() (*env, error) {
+func LoadMinioEnv() (*env, error) {
 	err := godotenv.Load(".env")
 	if err != nil {
 		return nil, fmt.Errorf("Error loading .env file")
@@ -32,10 +32,10 @@ func loadMinioEnv() (*env, error) {
 	useSSL := os.Getenv("MINIO_USE_SSL") == "true"
 
 	return &env{
-		endpoint:        endpoint,
-		accessKeyID:     accessKeyID,
-		secretAccessKey: secretAccessKey,
-		useSSL:          useSSL,
+		Endpoint:        endpoint,
+		AccessKeyID:     accessKeyID,
+		SecretAccessKey: secretAccessKey,
+		UseSSL:          useSSL,
 	}, nil
 }
 
@@ -48,14 +48,14 @@ type Video struct {
 }
 
 func ProcessVideoForStream(videoinfo *Video) error {
-	env, err := loadMinioEnv()
+	env, err := LoadMinioEnv()
 	if err != nil {
 		return err
 	}
 
-	minioClient, err := minio.New(string(env.endpoint), &minio.Options{
-		Creds:  credentials.NewStaticV4(string(env.accessKeyID), string(env.secretAccessKey), ""),
-		Secure: env.useSSL,
+	minioClient, err := minio.New(string(env.Endpoint), &minio.Options{
+		Creds:  credentials.NewStaticV4(string(env.AccessKeyID), string(env.SecretAccessKey), ""),
+		Secure: env.UseSSL,
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating minio client: %v", err)
@@ -120,7 +120,6 @@ func ProcessVideoForStream(videoinfo *Video) error {
 				"f":             "hls",
 			},
 		).Run()
-
 	if err != nil {
 		return fmt.Errorf("Error with ffmpeg: %v", err)
 	}
@@ -130,20 +129,36 @@ func ProcessVideoForStream(videoinfo *Video) error {
 			return fmt.Errorf("Error walking path at file %s: %v", info.Name(), err)
 		}
 
-		if !info.IsDir() && filepath.Ext(info.Name()) == ".m3u8" || filepath.Ext(info.Name()) == ".ts" {
-			uploadInfo, err := minioClient.FPutObject(
-				ctx,
-				videoinfo.DestBucketName,
-				info.Name(),
-				path,
-				minio.PutObjectOptions{},
-			)
-			if err != nil {
-				return fmt.Errorf("Error uploading file %s: %v", info.Name(), err)
-			}
+		// Set the correct content type
+		var contentType string
+		switch filepath.Ext(info.Name()) {
+		case ".m3u8":
+			contentType = "application/vnd.apple.mpegurl"
+		case ".ts":
+			contentType = "video/mp2t"
+		default:
+			contentType = "application/octet-stream" // Default for other files
+		}
 
-			fmt.Printf("Successfully uploaded %s to %s\n", info.Name(), uploadInfo.Location)
-			fmt.Printf("Uploaded information: %v\n", uploadInfo)
+		if !info.IsDir() {
+			ext := filepath.Ext(info.Name())
+			if ext == ".m3u8" || ext == ".ts" {
+				uploadInfo, err := minioClient.FPutObject(
+					ctx,
+					videoinfo.DestBucketName,
+					info.Name(),
+					path,
+					minio.PutObjectOptions{
+						ContentType: contentType,
+					},
+				)
+				if err != nil {
+					return fmt.Errorf("Error uploading file %s: %v", info.Name(), err)
+				}
+
+				fmt.Printf("Successfully uploaded %s to %s\n", info.Name(), uploadInfo.Location)
+				fmt.Printf("Uploaded information: %v\n", uploadInfo)
+			}
 		}
 
 		return nil
