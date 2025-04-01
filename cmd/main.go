@@ -1,3 +1,28 @@
+// package main
+//
+// import (
+// 	"fmt"
+//
+// 	"github.com/nmktad/bumflix/pkg/ffmpeg"
+// )
+//
+// func main() {
+// 	err := ffmpeg.ProcessVideoForStream(
+// 		&ffmpeg.Video{
+// 			Filename:       "Its.A.Wonderful.Life.1946.2160p.4K.BluRay.x265.10bit.AAC5.1-[YTS.MX].mkv",
+// 			FileType:       "mkv",
+// 			BucketName:     "movies",
+// 			DestBucketName: "movies-processed",
+// 			SignedURL:      "http://localhost:9001/api/v1/download-shared-object/aHR0cDovLzEyNy4wLjAuMTo5MDAwL21vdmllcy9JdHMuQS5Xb25kZXJmdWwuTGlmZS4xOTQ2LjIxNjBwLjRLLkJsdVJheS54MjY1LjEwYml0LkFBQzUuMS0lNUJZVFMuTVglNUQubWt2P1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9MlVWN1NVMlNZME1RSzNKVUJNVkolMkYyMDI1MDQwMSUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNTA0MDFUMDkyNzQ5WiZYLUFtei1FeHBpcmVzPTQzMTk5JlgtQW16LVNlY3VyaXR5LVRva2VuPWV5SmhiR2NpT2lKSVV6VXhNaUlzSW5SNWNDSTZJa3BYVkNKOS5leUpoWTJObGMzTkxaWGtpT2lJeVZWWTNVMVV5VTFrd1RWRkxNMHBWUWsxV1NpSXNJbVY0Y0NJNk1UYzBNelUwTWpBeU55d2ljR0Z5Wlc1MElqb2lZblZ0Wm14cGVDSjkuZnMtWlRWT2RIZkFRa0h4ZHpyUUdhN3B1VEZXdnd0VzE3R0ZqQWtuLWd2ZzdCV2xkWFFHV2FKRGc1QTlBektuUEdRc21ZSTlOMGZTenZMWEZxV1dJY0EmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JnZlcnNpb25JZD1udWxsJlgtQW16LVNpZ25hdHVyZT01ZWNlMTg3YzMxY2EzNDgxOTNjMjA5MTgwZGFjMjE0ZGZiZmQyMjIwZmYyZTEwNDkzNzhmNWFjOWU4NzEwOTRk",
+// 		},
+// 	)
+// 	if err != nil {
+// 		panic(fmt.Sprintf("Error processing video: %v", err))
+// 	}
+//
+// 	fmt.Println("Video processed successfully")
+// }
+
 package main
 
 import (
@@ -12,29 +37,34 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/nmktad/bumflix/pkg/ffmpeg"
+	"github.com/nmktad/bumflix/pkg/env"
 )
 
-var minioClient *minio.Client
+var (
+	minioClient *minio.Client
+	envVars     *env.Env
+)
 
 func main() {
 	http.HandleFunc("/", serveHLS)
 
-	env, err := ffmpeg.LoadMinioEnv()
+	err := env.LoadEnv()
 	if err != nil {
-		log.Fatal("error loading minio env")
+		log.Fatal("couldn't load env variables")
 	}
 
-	minioClient, err = minio.New(string(env.Endpoint), &minio.Options{
-		Creds:  credentials.NewStaticV4(string(env.AccessKeyID), string(env.SecretAccessKey), ""),
-		Secure: env.UseSSL,
+	envVars = env.EnvInstance
+
+	minioClient, err = minio.New(string(envVars.Endpoint), &minio.Options{
+		Creds:  credentials.NewStaticV4(string(envVars.AccessKeyID), string(envVars.SecretAccessKey), ""),
+		Secure: envVars.UseSSL,
 	})
 	if err != nil {
 		log.Fatal(fmt.Errorf("Error creating minio client: %v", err))
 	}
 
 	// Route to serve video content
-	http.HandleFunc("/video/", serveHLS)
+	http.HandleFunc("/video/playlist", serveHLS)
 
 	fmt.Printf("Starting server on port %d...\n", 8080)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", 8080), nil))
@@ -42,7 +72,7 @@ func main() {
 
 // serveHLS fetches HLS files from MinIO and serves them with correct headers
 func serveHLS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*") // Allow all origins
+	w.Header().Set("Access-Control-Allow-Origin", string(envVars.FrontendURL))
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
@@ -87,30 +117,3 @@ func getPresignedURL(objectName string) (string, error) {
 
 	return presignedURL.String(), nil
 }
-
-// package main
-//
-// import (
-//
-//	"fmt"
-//
-//	"github.com/nmktad/bumflix/pkg/ffmpeg"
-//
-// )
-//
-//	func main() {
-//		err := ffmpeg.ProcessVideoForStream(
-//			&ffmpeg.Video{
-//				Filename:       "It.Happened.One.Night.1934.2160p.4K.BluRay.x265.10bit.AAC5.1-[YTS.MX].mkv",
-//				FileType:       "mkv",
-//				BucketName:     "movies",
-//				DestBucketName: "movies-processed",
-//				SignedURL:      "http://localhost:9001/api/v1/download-shared-object/aHR0cDovLzEyNy4wLjAuMTo5MDAwL21vdmllcy9JdC5IYXBwZW5lZC5PbmUuTmlnaHQuMTkzNC4yMTYwcC40Sy5CbHVSYXkueDI2NS4xMGJpdC5BQUM1LjEtJTVCWVRTLk1YJTVELm1rdj9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPVVWSVU3VFU2WFI4WENGSUpCWFVUJTJGMjAyNTAzMjglMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwMzI4VDE1MDk1N1omWC1BbXotRXhwaXJlcz00MzIwMCZYLUFtei1TZWN1cml0eS1Ub2tlbj1leUpoYkdjaU9pSklVelV4TWlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKaFkyTmxjM05MWlhraU9pSlZWa2xWTjFSVk5saFNPRmhEUmtsS1FsaFZWQ0lzSW1WNGNDSTZNVGMwTXpJeE56VTNOQ3dpY0dGeVpXNTBJam9pWW5WdFpteHBlQ0o5Lkh1NXpyWmdOTXVONDI3ZHlwZmV3ZUhkM0xwdmFTNk1malMtWm1fYWJWZ1NNQnlURERYcnVsSFhNVHR4cVFmbW8xb04yUFl2VXBUcmRIWldPR1dPX2tBJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZ2ZXJzaW9uSWQ9bnVsbCZYLUFtei1TaWduYXR1cmU9MmE4NTFjYjYxMGE2NDhhNWE1YjQ5N2I2MjlkOTczY2EwN2E2MzA2OTE0YjRmNjk1MDgyYjgwMDliZjJhN2U0OA",
-//			},
-//		)
-//		if err != nil {
-//			panic(fmt.Sprintf("Error processing video: %v", err))
-//		}
-//
-//		fmt.Println("Video processed successfully")
-//	}

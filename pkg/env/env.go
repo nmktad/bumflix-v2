@@ -12,6 +12,7 @@ type Env struct {
 	AccessKeyID     []byte
 	SecretAccessKey []byte
 	UseSSL          bool
+	FrontendURL     []byte
 }
 
 var EnvInstance *Env
@@ -23,6 +24,7 @@ func LoadEnv() error {
 	}
 
 	endpoint := []byte(os.Getenv("MINIO_ENDPOINT"))
+	frontendURL := []byte(os.Getenv("FRONTEND_URL"))
 	accessKeyID := []byte(os.Getenv("MINIO_ACCESS_KEY"))
 	secretAccessKey := []byte(os.Getenv("MINIO_SECRET_KEY"))
 	useSSL := os.Getenv("MINIO_USE_SSL") == "true"
@@ -32,6 +34,7 @@ func LoadEnv() error {
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
 		UseSSL:          useSSL,
+		FrontendURL:     frontendURL,
 	}
 
 	return nil
