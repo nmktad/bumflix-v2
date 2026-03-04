@@ -24,6 +24,10 @@ variable "aws_s3_endpoint" {
   type = string
 }
 
+variable "aws_localstack_endpoint" {
+  type = string
+}
+
 variable "aws_bucket_name_origin" {
   type = string
 }
@@ -43,7 +47,8 @@ provider "aws" {
   skip_metadata_api_check     = true
 
   endpoints {
-    s3 = var.aws_s3_endpoint
+    s3  = var.aws_s3_endpoint
+    sqs = var.aws_localstack_endpoint
   }
 }
 
