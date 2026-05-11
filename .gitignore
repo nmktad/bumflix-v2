@@ -45,5 +45,6 @@ terraform.rc
 
 # custom
 .volume
+volume
 .envrc
 media

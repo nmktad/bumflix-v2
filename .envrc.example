@@ -1,0 +1,25 @@
+export AWS_ACCESS_KEY_ID=dummy
+export AWS_SECRET_ACCESS_KEY=dummy
+export AWS_DEFAULT_REGION=us-west-2
+
+export LOCALSTACK_S3_ENDPOINT=http://s3.localhost.localstack.cloud:4566
+export LOCALSTACK_ENDPOINT=http://localhost:4566
+export LOCALSTACK_AUTH_TOKEN=ls-CeCu5808-mUsO-8150-BOYO-NipiDIbia006
+
+export BUCKET_NAME_ORIGIN=bumflix-raw
+export BUCKET_NAME_DISTRIBUTION=bumflix-hls
+export INGESTION_QUEUE=bumflix-transcoding-queue
+export DEADLETTER_QUEUE=bumflix-transcoding-deadletter
+
+export TF_VAR_access_key_id=${AWS_ACCESS_KEY_ID}
+export TF_VAR_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+export TF_VAR_default_region=${AWS_DEFAULT_REGION}
+
+export TF_VAR_localstack_endpoint=${LOCALSTACK_ENDPOINT}
+export TF_VAR_localstack_s3_endpoint=${LOCALSTACK_S3_ENDPOINT}
+
+export TF_VAR_bucket_name_origin=${BUCKET_NAME_ORIGIN}
+export TF_VAR_bucket_name_distribution=${BUCKET_NAME_DISTRIBUTION}
+
+export TF_VAR_ingestion_queue=${INGESTION_QUEUE}
+export TF_VAR_deadletter_queue=${DEADLETTER_QUEUE}
